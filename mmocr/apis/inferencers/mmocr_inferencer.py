@@ -6,13 +6,13 @@ from typing import Dict, List, Optional, Tuple, Union
 import mmcv
 import mmengine
 import numpy as np
+from leiadepth.utils import listdir_recursive
 from rich.progress import track
 
 from mmocr.registry import VISUALIZERS
 from mmocr.structures import TextSpottingDataSample
 from mmocr.utils import ConfigType, bbox2poly, crop_img, poly2bbox
-from .base_mmocr_inferencer import (BaseMMOCRInferencer, InputsType, PredType,
-                                    ResType)
+from .base_mmocr_inferencer import BaseMMOCRInferencer, InputsType, PredType, ResType
 from .kie_inferencer import KIEInferencer
 from .textdet_inferencer import TextDetInferencer
 from .textrec_inferencer import TextRecInferencer
@@ -315,8 +315,12 @@ class MMOCRInferencer(BaseMMOCRInferencer):
         ) = self._dispatch_kwargs(
             save_vis=save_vis, save_pred=save_pred, return_vis=return_vis, **kwargs
         )
-
-        ori_inputs = self._inputs_to_list(inputs)
+        output_ready = set(listdir_recursive(out_dir))
+        ori_inputs = [
+            osp.join(inputs, path)
+            for path in listdir_recursive(inputs)
+            if osp.splitext(path)[0] + ".png" not in output_ready
+        ]
         if det_batch_size is None:
             det_batch_size = batch_size
         if rec_batch_size is None:
@@ -337,7 +341,11 @@ class MMOCRInferencer(BaseMMOCRInferencer):
                 **forward_kwargs,
             )
             visualization = self.visualize(
-                ori_input, preds, img_out_dir=img_out_dir, **visualize_kwargs
+                ori_input,
+                preds,
+                img_out_dir=img_out_dir,
+                input_dir=inputs,
+                **visualize_kwargs,
             )
             batch_res = self.postprocess(
                 preds, visualization, pred_out_dir=pred_out_dir, **postprocess_kwargs

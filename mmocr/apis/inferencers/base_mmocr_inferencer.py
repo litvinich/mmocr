@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os
 import os.path as osp
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
@@ -122,7 +123,7 @@ class BaseMMOCRInferencer(BaseInferencer):
         show: bool = False,
         wait_time: int = 0,
         draw_pred: bool = True,
-        pred_score_thr: float = 0.3,
+        pred_score_thr: float = 0.5,
         out_dir: str = "results/",
         save_vis: bool = False,
         save_pred: bool = False,
@@ -262,9 +263,10 @@ class BaseMMOCRInferencer(BaseInferencer):
         show: bool = False,
         wait_time: int = 0,
         draw_pred: bool = True,
-        pred_score_thr: float = 0.3,
+        pred_score_thr: float = 0.5,
         save_vis: bool = False,
         img_out_dir: str = "",
+        input_dir: str = "",
     ) -> Union[List[np.ndarray], None]:
         """Visualize predictions.
 
@@ -308,12 +310,14 @@ class BaseMMOCRInferencer(BaseInferencer):
                 img = single_input.copy()[:, :, ::-1]  # to RGB
             else:
                 raise ValueError("Unsupported input type: " f"{type(single_input)}")
-            img_name = osp.splitext(osp.basename(pred.img_path))[0]
+            img_name = osp.splitext(pred.img_path.replace(input_dir, ""))[0]
+            if img_name.startswith("/"):
+                img_name = img_name[1:]
 
             if save_vis and img_out_dir:
-                out_file = osp.splitext(img_name)[0]
-                out_file = f"{out_file}.png"
+                out_file = f"{img_name}.png"
                 out_file = osp.join(img_out_dir, out_file)
+                os.makedirs(osp.dirname(out_file), exist_ok=True)
             else:
                 out_file = None
 
@@ -321,7 +325,7 @@ class BaseMMOCRInferencer(BaseInferencer):
                 continue
             visualization = self.visualizer.add_datasample(
                 img_name,
-                np.zeros_like(img)[:, :, 0],  # img
+                np.zeros_like(img)[:, :, 0],
                 pred,
                 show=show,
                 wait_time=wait_time,
@@ -333,7 +337,6 @@ class BaseMMOCRInferencer(BaseInferencer):
             out_img = cv2.imread(out_file)[:, :, 1]
             out_img[out_img > 0] = 255
             out_img = 255 - out_img
-            print(np.unique(out_img))
             cv2.imwrite(out_file, out_img)
             results.append(visualization)
 
