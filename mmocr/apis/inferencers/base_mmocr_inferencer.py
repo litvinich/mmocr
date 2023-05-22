@@ -320,7 +320,7 @@ class BaseMMOCRInferencer(BaseInferencer):
                 continue
             visualization = self.visualizer.add_datasample(
                 img_name,
-                img,
+                np.zeros_like(img)[:, :, 0],
                 pred,
                 show=show,
                 wait_time=wait_time,
@@ -329,6 +329,7 @@ class BaseMMOCRInferencer(BaseInferencer):
                 pred_score_thr=pred_score_thr,
                 out_file=out_file,
             )
+            visualization[visualization > 0] = 255
             results.append(visualization)
 
         return results
