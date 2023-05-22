@@ -321,7 +321,9 @@ class BaseMMOCRInferencer(BaseInferencer):
             else:
                 out_file = None
 
-            if len(pred.pred_instances.polygons) == 0:
+            if len(pred.pred_instances.polygons) == 0 or all(
+                [score <= pred_score_thr for score in pred.pred_instances.scores]
+            ):
                 continue
             visualization = self.visualizer.add_datasample(
                 img_name,
