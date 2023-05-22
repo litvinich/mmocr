@@ -144,3 +144,7 @@ workdirs/
 .history/
 .dev/
 data/
+*.json
+*.jpg
+*.png
+*.jpeg

@@ -45,25 +45,28 @@ class BaseMMOCRInferencer(BaseInferencer):
     preprocess_kwargs: set = set()
     forward_kwargs: set = set()
     visualize_kwargs: set = {
-        'return_vis', 'show', 'wait_time', 'draw_pred', 'pred_score_thr',
-        'save_vis'
+        "return_vis",
+        "show",
+        "wait_time",
+        "draw_pred",
+        "pred_score_thr",
+        "save_vis",
     }
-    postprocess_kwargs: set = {
-        'print_result', 'return_datasample', 'save_pred'
-    }
-    loading_transforms: list = ['LoadImageFromFile', 'LoadImageFromNDArray']
+    postprocess_kwargs: set = {"print_result", "return_datasample", "save_pred"}
+    loading_transforms: list = ["LoadImageFromFile", "LoadImageFromNDArray"]
 
-    def __init__(self,
-                 model: Union[ModelType, str, None] = None,
-                 weights: Optional[str] = None,
-                 device: Optional[str] = None,
-                 scope: str = 'mmocr') -> None:
+    def __init__(
+        self,
+        model: Union[ModelType, str, None] = None,
+        weights: Optional[str] = None,
+        device: Optional[str] = None,
+        scope: str = "mmocr",
+    ) -> None:
         # A global counter tracking the number of images given in the form
         # of ndarray, for naming the output images
         self.num_unnamed_imgs = 0
         init_default_scope(scope)
-        super().__init__(
-            model=model, weights=weights, device=device, scope=scope)
+        super().__init__(model=model, weights=weights, device=device, scope=scope)
         self.model = revert_sync_batchnorm(self.model)
 
     def preprocess(self, inputs: InputsType, batch_size: int = 1, **kwargs):
@@ -96,9 +99,10 @@ class BaseMMOCRInferencer(BaseInferencer):
                 for _ in range(chunk_size):
                     inputs_ = next(inputs_iter)
                     pipe_out = self.pipeline(inputs_)
-                    if pipe_out['data_samples'].get('img_path') is None:
-                        pipe_out['data_samples'].set_metainfo(
-                            dict(img_path=f'{self.num_unnamed_imgs}.jpg'))
+                    if pipe_out["data_samples"].get("img_path") is None:
+                        pipe_out["data_samples"].set_metainfo(
+                            dict(img_path=f"{self.num_unnamed_imgs}.jpg")
+                        )
                         self.num_unnamed_imgs += 1
                     chunk_data.append((inputs_, pipe_out))
                 yield chunk_data
@@ -107,21 +111,23 @@ class BaseMMOCRInferencer(BaseInferencer):
                     yield chunk_data
                 break
 
-    def __call__(self,
-                 inputs: InputsType,
-                 return_datasamples: bool = False,
-                 batch_size: int = 1,
-                 progress_bar: bool = True,
-                 return_vis: bool = False,
-                 show: bool = False,
-                 wait_time: int = 0,
-                 draw_pred: bool = True,
-                 pred_score_thr: float = 0.3,
-                 out_dir: str = 'results/',
-                 save_vis: bool = False,
-                 save_pred: bool = False,
-                 print_result: bool = False,
-                 **kwargs) -> dict:
+    def __call__(
+        self,
+        inputs: InputsType,
+        return_datasamples: bool = False,
+        batch_size: int = 1,
+        progress_bar: bool = True,
+        return_vis: bool = False,
+        show: bool = False,
+        wait_time: int = 0,
+        draw_pred: bool = True,
+        pred_score_thr: float = 0.3,
+        out_dir: str = "results/",
+        save_vis: bool = False,
+        save_pred: bool = False,
+        print_result: bool = False,
+        **kwargs,
+    ) -> dict:
         """Call the inferencer.
 
         Args:
@@ -161,13 +167,14 @@ class BaseMMOCRInferencer(BaseInferencer):
                 "predictions" and "visualization".
         """
         if (save_vis or save_pred) and not out_dir:
-            raise ValueError('out_dir must be specified when save_vis or '
-                             'save_pred is True!')
+            raise ValueError(
+                "out_dir must be specified when save_vis or " "save_pred is True!"
+            )
         if out_dir:
-            img_out_dir = osp.join(out_dir, 'vis')
-            pred_out_dir = osp.join(out_dir, 'preds')
+            img_out_dir = osp.join(out_dir, "vis")
+            pred_out_dir = osp.join(out_dir, "preds")
         else:
-            img_out_dir, pred_out_dir = '', ''
+            img_out_dir, pred_out_dir = "", ""
         (
             preprocess_kwargs,
             forward_kwargs,
@@ -182,26 +189,29 @@ class BaseMMOCRInferencer(BaseInferencer):
             save_vis=save_vis,
             save_pred=save_pred,
             print_result=print_result,
-            **kwargs)
+            **kwargs,
+        )
 
         ori_inputs = self._inputs_to_list(inputs)
-        inputs = self.preprocess(
-            ori_inputs, batch_size=batch_size, **preprocess_kwargs)
-        results = {'predictions': [], 'visualization': []}
+        inputs = self.preprocess(ori_inputs, batch_size=batch_size, **preprocess_kwargs)
+        results = {"predictions": [], "visualization": []}
         for ori_inputs, data in track(
-                inputs, description='Inference', disable=not progress_bar):
+            inputs, description="Inference", disable=not progress_bar
+        ):
             preds = self.forward(data, **forward_kwargs)
             visualization = self.visualize(
-                ori_inputs, preds, img_out_dir=img_out_dir, **visualize_kwargs)
+                ori_inputs, preds, img_out_dir=img_out_dir, **visualize_kwargs
+            )
             batch_res = self.postprocess(
                 preds,
                 visualization,
                 return_datasamples,
                 pred_out_dir=pred_out_dir,
-                **postprocess_kwargs)
-            results['predictions'].extend(batch_res['predictions'])
-            if return_vis and batch_res['visualization'] is not None:
-                results['visualization'].extend(batch_res['visualization'])
+                **postprocess_kwargs,
+            )
+            results["predictions"].extend(batch_res["predictions"])
+            if return_vis and batch_res["visualization"] is not None:
+                results["visualization"].extend(batch_res["visualization"])
         return results
 
     def _init_pipeline(self, cfg: ConfigType) -> Compose:
@@ -209,25 +219,27 @@ class BaseMMOCRInferencer(BaseInferencer):
         pipeline_cfg = cfg.test_dataloader.dataset.pipeline
 
         # For inference, the key of ``instances`` is not used.
-        if 'meta_keys' in pipeline_cfg[-1]:
-            pipeline_cfg[-1]['meta_keys'] = tuple(
-                meta_key for meta_key in pipeline_cfg[-1]['meta_keys']
-                if meta_key != 'instances')
+        if "meta_keys" in pipeline_cfg[-1]:
+            pipeline_cfg[-1]["meta_keys"] = tuple(
+                meta_key
+                for meta_key in pipeline_cfg[-1]["meta_keys"]
+                if meta_key != "instances"
+            )
 
         # Loading annotations is also not applicable
-        idx = self._get_transform_idx(pipeline_cfg, 'LoadOCRAnnotations')
+        idx = self._get_transform_idx(pipeline_cfg, "LoadOCRAnnotations")
         if idx != -1:
             del pipeline_cfg[idx]
 
         for transform in self.loading_transforms:
             load_img_idx = self._get_transform_idx(pipeline_cfg, transform)
             if load_img_idx != -1:
-                pipeline_cfg[load_img_idx]['type'] = 'InferencerLoader'
+                pipeline_cfg[load_img_idx]["type"] = "InferencerLoader"
                 break
         if load_img_idx == -1:
             raise ValueError(
-                f'None of {self.loading_transforms} is found in the test '
-                'pipeline')
+                f"None of {self.loading_transforms} is found in the test " "pipeline"
+            )
 
         return Compose(pipeline_cfg)
 
@@ -237,20 +249,22 @@ class BaseMMOCRInferencer(BaseInferencer):
         If the transform is not found, returns -1.
         """
         for i, transform in enumerate(pipeline_cfg):
-            if transform['type'] == name:
+            if transform["type"] == name:
                 return i
         return -1
 
-    def visualize(self,
-                  inputs: InputsType,
-                  preds: PredType,
-                  return_vis: bool = False,
-                  show: bool = False,
-                  wait_time: int = 0,
-                  draw_pred: bool = True,
-                  pred_score_thr: float = 0.3,
-                  save_vis: bool = False,
-                  img_out_dir: str = '') -> Union[List[np.ndarray], None]:
+    def visualize(
+        self,
+        inputs: InputsType,
+        preds: PredType,
+        return_vis: bool = False,
+        show: bool = False,
+        wait_time: int = 0,
+        draw_pred: bool = True,
+        pred_score_thr: float = 0.3,
+        save_vis: bool = False,
+        img_out_dir: str = "",
+    ) -> Union[List[np.ndarray], None]:
         """Visualize predictions.
 
         Args:
@@ -277,30 +291,33 @@ class BaseMMOCRInferencer(BaseInferencer):
         if self.visualizer is None or not (show or save_vis or return_vis):
             return None
 
-        if getattr(self, 'visualizer') is None:
-            raise ValueError('Visualization needs the "visualizer" term'
-                             'defined in the config, but got None.')
+        if getattr(self, "visualizer") is None:
+            raise ValueError(
+                'Visualization needs the "visualizer" term'
+                "defined in the config, but got None."
+            )
 
         results = []
 
         for single_input, pred in zip(inputs, preds):
             if isinstance(single_input, str):
                 img_bytes = mmengine.fileio.get(single_input)
-                img = mmcv.imfrombytes(img_bytes, channel_order='rgb')
+                img = mmcv.imfrombytes(img_bytes, channel_order="rgb")
             elif isinstance(single_input, np.ndarray):
                 img = single_input.copy()[:, :, ::-1]  # to RGB
             else:
-                raise ValueError('Unsupported input type: '
-                                 f'{type(single_input)}')
+                raise ValueError("Unsupported input type: " f"{type(single_input)}")
             img_name = osp.splitext(osp.basename(pred.img_path))[0]
 
             if save_vis and img_out_dir:
                 out_file = osp.splitext(img_name)[0]
-                out_file = f'{out_file}.jpg'
+                out_file = f"{out_file}.png"
                 out_file = osp.join(img_out_dir, out_file)
             else:
                 out_file = None
 
+            if len(pred.pred_instances.polygons) == 0:
+                continue
             visualization = self.visualizer.add_datasample(
                 img_name,
                 img,
@@ -323,7 +340,7 @@ class BaseMMOCRInferencer(BaseInferencer):
         return_datasample: bool = False,
         print_result: bool = False,
         save_pred: bool = False,
-        pred_out_dir: str = '',
+        pred_out_dir: str = "",
     ) -> Union[ResType, Tuple[ResType, np.ndarray]]:
         """Process the predictions and visualization results from ``forward``
         and ``visualize``.
@@ -366,15 +383,15 @@ class BaseMMOCRInferencer(BaseInferencer):
                 result = self.pred2dict(pred)
                 if save_pred and pred_out_dir:
                     pred_name = osp.splitext(osp.basename(pred.img_path))[0]
-                    pred_name = f'{pred_name}.json'
+                    pred_name = f"{pred_name}.json"
                     pred_out_file = osp.join(pred_out_dir, pred_name)
                     mmengine.dump(result, pred_out_file)
                 results.append(result)
         # Add img to the results after printing and dumping
-        result_dict['predictions'] = results
+        result_dict["predictions"] = results
         if print_result:
             print(result_dict)
-        result_dict['visualization'] = visualization
+        result_dict["visualization"] = visualization
         return result_dict
 
     def pred2dict(self, data_sample: InstanceData) -> Dict:
@@ -386,8 +403,7 @@ class BaseMMOCRInferencer(BaseInferencer):
         """
         raise NotImplementedError
 
-    def _array2list(self, array: Union[Tensor, np.ndarray,
-                                       List]) -> List[float]:
+    def _array2list(self, array: Union[Tensor, np.ndarray, List]) -> List[float]:
         """Convert a tensor or numpy array to a list.
 
         Args:
