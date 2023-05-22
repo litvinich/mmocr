@@ -7,7 +7,7 @@ import mmcv
 import mmengine
 import numpy as np
 from leiadepth.utils import listdir_recursive
-from rich.progress import track
+from tqdm import tqdm
 
 from mmocr.registry import VISUALIZERS
 from mmocr.structures import TextSpottingDataSample
@@ -332,7 +332,7 @@ class MMOCRInferencer(BaseMMOCRInferencer):
             ori_inputs, batch_size
         )
         # results = {"predictions": [], "visualization": []}
-        for ori_input in track(chunked_inputs, description="Inference"):
+        for ori_input in tqdm(chunked_inputs, total=len(ori_inputs) // batch_size):
             preds = self.forward(
                 ori_input,
                 det_batch_size=det_batch_size,
