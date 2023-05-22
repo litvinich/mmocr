@@ -2,6 +2,7 @@
 import os.path as osp
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
+import cv2
 import mmcv
 import mmengine
 import numpy as np
@@ -320,7 +321,7 @@ class BaseMMOCRInferencer(BaseInferencer):
                 continue
             visualization = self.visualizer.add_datasample(
                 img_name,
-                np.zeros_like(img)[:, :, 0],
+                np.zeros_like(img)[:, :, 0],  # img
                 pred,
                 show=show,
                 wait_time=wait_time,
@@ -329,7 +330,11 @@ class BaseMMOCRInferencer(BaseInferencer):
                 pred_score_thr=pred_score_thr,
                 out_file=out_file,
             )
-            visualization[visualization > 0] = 255
+            out_img = cv2.imread(out_file)[:, :, 1]
+            out_img[out_img > 0] = 255
+            out_img = 255 - out_img
+            print(np.unique(out_img))
+            cv2.imwrite(out_file, out_img)
             results.append(visualization)
 
         return results
